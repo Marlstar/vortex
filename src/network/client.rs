@@ -1,5 +1,7 @@
-use std::{io::{Read, Write}, net::{TcpStream, ToSocketAddrs}, path::PathBuf};
+use std::{io::{Read, Write}, net::{TcpStream, ToSocketAddrs}, path::{Path, PathBuf}};
 use crate::{args::ReceiveArgs, Error, ARGS};
+use super::packet::Packet;
+use byteorder::{ReadBytesExt, BigEndian};
 
 const BUF_CAPACITY: usize = 1024;
 
@@ -16,14 +18,44 @@ impl Client {
     }
 
     pub fn main(&mut self) {
-        let bytes = self.recv().unwrap();
-        let mut file = std::fs::File::create_new(&self.output_path).unwrap();
-        file.write_all(&bytes).unwrap();
+        // let bytes = self.recv().unwrap();
+        if let Packet::Header { filename, total_size, chunk_count, } = self.recv_header().unwrap() {
+            log::info!("Receiving file \"{}\"", filename);
+            if format!("{}", self.output_path.display()) == "/" {
+                self.output_path = PathBuf::from(format!("./{filename}"));
+            }
+        } else {
+            log::warn!("No header packet sent, aborting");
+            return;
+        }
+
+        if let Packet::Content(bytes) = self.recv_body_chunk().unwrap() {
+            // TODO: file splitting and multiple chunks
+            let mut file = std::fs::File::create_new(&self.output_path).unwrap();
+            file.write_all(&bytes).unwrap();
+        }
     }
 
-    pub fn recv(&mut self) -> Result<Vec<u8>, Error> {
-        let mut buf = Vec::with_capacity(BUF_CAPACITY);
-        self.socket.read_to_end(&mut buf)?;
+    fn recv_header(&mut self) -> Result<Packet, Error> {
+        let bytes = self.recv()?;
+        let packet = rmp_serde::from_slice(&bytes).unwrap();
+        return Ok(packet);
+    }
+
+    // TODO: return a packet
+    fn recv_body_chunk(&mut self) -> Result<Packet, Error> {
+        // TODO: size
+        std::thread::sleep(std::time::Duration::from_secs(1));
+        let bytes = self.recv()?;
+        let packet = rmp_serde::from_slice(&bytes).unwrap();
+        return Ok(packet);
+    }
+
+    fn recv(&mut self) -> Result<Vec<u8>, Error> {
+        let len = self.socket.read_u32::<BigEndian>().unwrap();
+        log::debug!("Receiving {len} bytes");
+        let mut buf = vec![0u8; len as usize];
+        self.socket.read_exact(&mut buf)?;
         Ok(buf)
     }
 }

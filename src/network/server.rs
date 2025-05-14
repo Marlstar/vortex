@@ -1,8 +1,14 @@
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::thread::JoinHandle;
+use serde::Serialize;
+use byteorder::{WriteBytesExt, BigEndian};
+
 use crate::ARGS;
 use crate::Error;
+use crate::network::packet::Packet;
+
 
 pub struct Server {
     listener: TcpListener,
@@ -22,17 +28,26 @@ impl Server {
 impl Server {
     pub fn main(&mut self) {
         let path = self.path.clone();
-        let bytes_handle = std::thread::spawn(move || {
-            let mut buf = Vec::with_capacity(1024);
-            std::fs::File::open(path).unwrap().read_to_end(&mut buf).unwrap();
-            buf
-        });
+        let packets = std::thread::spawn(|| serialise_packets(make_packets(path)));
 
         loop {
             if self.accept() { break; }
         }
 
-        self.client.as_mut().unwrap().write_all(&bytes_handle.join().unwrap()).unwrap();
+        let packets = packets.join().unwrap();
+
+        for packet in &packets {
+            self.send(packet);
+        }
+    }
+
+    fn send(&mut self, bytes: &[u8]) {
+        let len = bytes.len() as u32;
+        let client = self.client.as_mut().unwrap();
+        client.write_u32::<BigEndian>(len).unwrap();
+        log::debug!("Sending {len} bytes");
+
+        self.client.as_mut().unwrap().write_all(bytes).unwrap();
     }
 
     fn accept(&mut self) -> bool {
@@ -47,6 +62,27 @@ impl Server {
     }
 }
 
+fn make_packets(path: impl AsRef<Path>) -> Vec<Packet> {
+    let filename = path.as_ref().file_name().unwrap().to_str().unwrap().into();
+    let header = Packet::Header {
+        chunk_count: 1,
+        total_size: 1,
+        filename,
+    };
+
+    let mut file = std::fs::File::open(path).unwrap();
+    let mut bytes = vec![];
+    file.read_to_end(&mut bytes).unwrap();
+    let content = Packet::Content(bytes);
+
+    return vec![header, content]
+}
+
+fn serialise_packets(packets: Vec<Packet>) -> Vec<Vec<u8>> {
+    return packets.into_iter()
+        .map(|p| rmp_serde::to_vec(&p).unwrap())
+        .collect::<Vec<Vec<u8>>>();
+}
 
 pub fn listener() -> Result<TcpListener, std::io::Error> {
     let l = match TcpListener::bind(("0.0.0.0", ARGS.port)) {
