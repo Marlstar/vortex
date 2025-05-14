@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use std::{path::PathBuf, sync::LazyLock};
+use std::{net::Ipv4Addr, path::PathBuf, sync::LazyLock};
 
 pub static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
 
@@ -39,4 +39,10 @@ pub struct SendArgs {
 
 #[derive(clap::Args, Debug, Clone)]
 pub struct ReceiveArgs {
+    /// Server address
+    pub server_addr: Ipv4Addr,
+
+    /// Where to save the received file
+    #[arg(short, default_value = "./")]
+    pub output_path: PathBuf,
 }

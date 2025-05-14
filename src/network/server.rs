@@ -1,3 +1,4 @@
+use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use crate::ARGS;
@@ -20,9 +21,18 @@ impl Server {
 
 impl Server {
     pub fn main(&mut self) {
+        let path = self.path.clone();
+        let bytes_handle = std::thread::spawn(move || {
+            let mut buf = Vec::with_capacity(1024);
+            std::fs::File::open(path).unwrap().read_to_end(&mut buf).unwrap();
+            buf
+        });
+
         loop {
             if self.accept() { break; }
         }
+
+        self.client.as_mut().unwrap().write_all(&bytes_handle.join().unwrap()).unwrap();
     }
 
     fn accept(&mut self) -> bool {
