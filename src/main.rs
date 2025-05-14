@@ -4,13 +4,13 @@ use vortex::args::Commands;
 fn main() {
     vortex::init_logger();
 
-    match ARGS.cmd {
-        Commands::Send { path: _ } => send(),
-        Commands::Receive { } => receive(),
+    match &ARGS.cmd {
+        Commands::Send(args) => send(args),
+        Commands::Receive(args) => todo!(),
     }
 }
 
-fn send() {
+fn send(args: &vortex::args::SendArgs) {
     use vortex::network::server::Server;
     let mut server = Server::new().unwrap();
     server.main();

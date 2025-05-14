@@ -25,13 +25,18 @@ pub struct Args {
 #[derive(Subcommand)]
 pub enum Commands {
     /// Send a file
-    Send {
-        /// Path of the file to send
-        path: PathBuf,
-    },
+    Send(SendArgs),
 
     /// Receive a file
-    Receive {
+    Receive(ReceiveArgs),
+}
 
-    }
+#[derive(clap::Args, Debug, Clone)]
+pub struct SendArgs {
+    /// Path of the file to send
+    path: PathBuf,
+}
+
+#[derive(clap::Args, Debug, Clone)]
+pub struct ReceiveArgs {
 }
