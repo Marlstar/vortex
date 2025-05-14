@@ -7,7 +7,7 @@ const BUF_CAPACITY: usize = 1024;
 
 pub struct Client {
     socket: TcpStream,
-    output_path: PathBuf,
+    output_path: Option<PathBuf>,
 }
 impl Client {
     pub fn new(args: &ReceiveArgs) -> Result<Self, Error> {
@@ -21,8 +21,8 @@ impl Client {
         // let bytes = self.recv().unwrap();
         if let Packet::Header { filename, total_size, chunk_count, } = self.recv_header().unwrap() {
             log::info!("Receiving file \"{}\"", filename);
-            if format!("{}", self.output_path.display()) == "/" {
-                self.output_path = PathBuf::from(format!("./{filename}"));
+            if self.output_path.is_none() {
+                self.output_path = Some(PathBuf::from(format!("./{filename}")));
             }
         } else {
             log::warn!("No header packet sent, aborting");
@@ -31,7 +31,7 @@ impl Client {
 
         if let Packet::Content(bytes) = self.recv_body_chunk().unwrap() {
             // TODO: file splitting and multiple chunks
-            let mut file = std::fs::File::create_new(&self.output_path).unwrap();
+            let mut file = std::fs::File::create_new(self.output_path.as_ref().unwrap()).unwrap();
             file.write_all(&bytes).unwrap();
         }
     }

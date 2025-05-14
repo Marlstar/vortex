@@ -43,6 +43,6 @@ pub struct ReceiveArgs {
     pub server_addr: Ipv4Addr,
 
     /// Where to save the received file
-    #[arg(short, default_value = "/")]
-    pub output_path: PathBuf,
+    #[arg(short)]
+    pub output_path: Option<PathBuf>,
 }
