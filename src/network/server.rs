@@ -1,16 +1,19 @@
 use std::net::{TcpListener, TcpStream};
+use std::path::PathBuf;
 use crate::ARGS;
 use crate::Error;
 
 pub struct Server {
     listener: TcpListener,
     client: Option<TcpStream>,
+    path: PathBuf,
 }
 impl Server {
-    pub fn new() -> Result<Self, Error> {
+    pub fn new(path: PathBuf) -> Result<Self, Error> {
         return Ok(Self {
             listener: listener()?,
             client: None,
+            path,
         });
     }
 }

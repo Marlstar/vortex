@@ -12,6 +12,6 @@ fn main() {
 
 fn send(args: &vortex::args::SendArgs) {
     use vortex::network::server::Server;
-    let mut server = Server::new().unwrap();
+    let mut server = Server::new(args.path.clone()).unwrap();
     server.main();
 }
