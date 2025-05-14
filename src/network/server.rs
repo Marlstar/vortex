@@ -13,6 +13,14 @@ impl Server {
             client: None,
         });
     }
+}
+
+impl Server {
+    pub fn main(&mut self) {
+        loop {
+            if self.accept() { break; }
+        }
+    }
 
     fn accept(&mut self) -> bool {
         if let Ok((sock, addr)) = self.listener.accept() {
