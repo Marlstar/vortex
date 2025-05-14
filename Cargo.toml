@@ -1,0 +1,9 @@
+[package]
+name = "vortex"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.5.38", features = ["derive"] }
+log = { version = "0.4.27", features = ["std"] }
+stderrlog = "0.6.0"
