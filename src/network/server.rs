@@ -9,6 +9,8 @@ use crate::ARGS;
 use crate::Error;
 use crate::network::packet::Packet;
 
+use super::packet::MAX_CHUNK_SIZE;
+
 
 pub struct Server {
     listener: TcpListener,
@@ -64,18 +66,35 @@ impl Server {
 
 fn make_packets(path: impl AsRef<Path>) -> Vec<Packet> {
     let filename = path.as_ref().file_name().unwrap().to_str().unwrap().into();
-    let header = Packet::Header {
-        chunk_count: 1,
-        total_size: 1,
-        filename,
-    };
 
     let mut file = std::fs::File::open(path).unwrap();
     let mut bytes = vec![];
     file.read_to_end(&mut bytes).unwrap();
-    let content = Packet::Content(bytes);
 
-    return vec![header, content]
+    let chunk_count = {
+        let r = bytes.len() % MAX_CHUNK_SIZE;
+        let c = bytes.len() / MAX_CHUNK_SIZE;
+
+        if r > 0 { c + 1 } else { c }
+    };
+
+    let header = Packet::Header {
+        chunk_count,
+        total_size: bytes.len(),
+        filename,
+    };
+
+    let mut out = Vec::with_capacity(chunk_count + 1);
+    out.push(header);
+
+    let mut bytes = bytes.into_iter();
+    
+    for _ in 0..chunk_count {
+        let b = (&mut bytes).take(MAX_CHUNK_SIZE).collect::<Vec<u8>>();
+        out.push(Packet::Content(b));
+    }
+
+    return out;
 }
 
 fn serialise_packets(packets: Vec<Packet>) -> Vec<Vec<u8>> {

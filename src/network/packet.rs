@@ -1,4 +1,5 @@
 use serde::{Serialize, Deserialize, Deserializer};
+pub const MAX_CHUNK_SIZE: usize = 1024;
 
 #[derive(Serialize, Deserialize)]
 pub enum Packet {
