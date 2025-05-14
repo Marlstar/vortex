@@ -34,7 +34,7 @@ pub enum Commands {
 #[derive(clap::Args, Debug, Clone)]
 pub struct SendArgs {
     /// Path of the file to send
-    path: PathBuf,
+    pub path: PathBuf,
 }
 
 #[derive(clap::Args, Debug, Clone)]
