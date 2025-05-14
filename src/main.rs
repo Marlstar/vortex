@@ -9,3 +9,8 @@ fn main() {
         Commands::Receive { } => receive(),
     }
 }
+
+fn send() {
+    use vortex::network::server::Server;
+    let mut server = Server::new();
+}
