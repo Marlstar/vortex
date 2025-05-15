@@ -3,13 +3,19 @@ pub const MAX_CHUNK_SIZE: usize = 1024;
 
 #[derive(Serialize, Deserialize)]
 pub enum Packet {
-    Header {
-        chunk_count: usize,
-        total_size: usize,
-        filename: String,
-    },
-    Content{
-        index: usize,
-        bytes: Vec<u8>,
-    },
+    Header(Header),
+    Content(Content),
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Header {
+    pub chunk_count: usize,
+    pub total_size: usize,
+    pub filename: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Content {
+    pub index: usize,
+    pub bytes: Vec<u8>,
 }

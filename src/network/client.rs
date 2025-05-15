@@ -18,31 +18,29 @@ impl Client {
     }
 
     pub fn main(&mut self) {
-        let chunks;
-        let size;
+        let header;
 
         // let bytes = self.recv().unwrap();
-        if let Packet::Header { filename, total_size, chunk_count, } = self.recv_header().unwrap() {
-            log::info!("Receiving file \"{}\"", filename);
+        if let Packet::Header(h) = self.recv_header().unwrap() {
+            header = h;
 
-            chunks = chunk_count;
-            size = total_size;
+            log::info!("Receiving file \"{}\"", header.filename);
 
             if self.output_path.is_none() {
-                self.output_path = Some(PathBuf::from(format!("./{filename}")));
+                self.output_path = Some(PathBuf::from(format!("./{}", header.filename)));
             }
         } else {
             log::error!("No header packet sent, aborting");
             return;
         }
 
-        let mut buf = vec![0u8; size];
-        for _ in 0..chunks {
+        let mut buf = vec![0u8; header.total_size];
+        for _ in 0..header.chunk_count {
             let chunk = self.recv_body_chunk().unwrap();
-            if let Packet::Content{ bytes, index } = chunk {
-                let start = index * MAX_CHUNK_SIZE;
-                let end = usize::min((index + 1) * MAX_CHUNK_SIZE, size);
-                buf[start..end].copy_from_slice(&bytes);
+            if let Packet::Content(c) = chunk {
+                let start = c.index * MAX_CHUNK_SIZE;
+                let end = usize::min((c.index + 1) * MAX_CHUNK_SIZE, header.total_size);
+                buf[start..end].copy_from_slice(&c.bytes);
             } else {
                 log::error!("Non-content packet received, aborting");
                 return;

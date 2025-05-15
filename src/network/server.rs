@@ -9,7 +9,7 @@ use crate::ARGS;
 use crate::Error;
 use crate::network::packet::Packet;
 
-use super::packet::MAX_CHUNK_SIZE;
+use super::packet::{Content, Header, MAX_CHUNK_SIZE};
 
 
 pub struct Server {
@@ -78,20 +78,23 @@ fn make_packets(path: impl AsRef<Path>) -> Vec<Packet> {
         if r > 0 { c + 1 } else { c }
     };
 
-    let header = Packet::Header {
+    let header = Packet::Header(Header {
         chunk_count,
         total_size: bytes.len(),
         filename,
-    };
+    });
 
     let mut out = Vec::with_capacity(chunk_count + 1);
     out.push(header);
 
     let mut bytes = bytes.into_iter();
     
-    for _ in 0..chunk_count {
+    for i in 0..chunk_count {
         let b = (&mut bytes).take(MAX_CHUNK_SIZE).collect::<Vec<u8>>();
-        out.push(Packet::Content(b));
+        out.push(Packet::Content(Content {
+            index: i,
+            bytes: b,
+        }));
     }
 
     return out;
