@@ -2,6 +2,17 @@
 name = "vortex"
 version = "0.1.0"
 edition = "2024"
+authors = ["Marley <marley@marlstar.com>"]
+homepage = "https://github.com/Marlstar/vortex"
+repository = "https://github.com/Marlstar/vortex"
+description = "A file transfer tool written in Rust"
+keywords = ["wormhole", "file", "transfer"]
+
+[package.metadata.wix]
+upgrade-guid = "DF3662B3-A0E3-4545-B968-6805E88A8FBE"
+path-guid = "1F90B6F8-18FD-43EF-AA4F-94902987169E"
+license = false
+eula = false
 
 [dependencies]
 byteorder = "1.5.0"
@@ -10,3 +21,8 @@ env_logger = "0.11.8"
 log = { version = "0.4.27", features = ["std"] }
 rmp-serde = "1.3.0"
 serde = { version = "1.0.219", features = ["derive"] }
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
