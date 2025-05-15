@@ -1,5 +1,5 @@
 use std::{io::{Read, Write}, net::{TcpStream, ToSocketAddrs}, path::{Path, PathBuf}};
-use crate::{args::ReceiveArgs, Error, ARGS};
+use crate::{args::ReceiveArgs, Error, ARGS, CWD};
 use super::packet::{Packet, MAX_CHUNK_SIZE};
 use byteorder::{ReadBytesExt, BigEndian};
 
@@ -27,7 +27,7 @@ impl Client {
             log::info!("Receiving file \"{}\"", header.filename);
 
             if self.output_path.is_none() {
-                self.output_path = Some(PathBuf::from(format!("./{}", header.filename)));
+                self.output_path = Some(CWD.join(header.filename));
             }
         } else {
             log::error!("No header packet sent, aborting");

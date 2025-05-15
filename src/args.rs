@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 use std::{net::Ipv4Addr, path::PathBuf, sync::LazyLock};
 
 pub static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
+pub static CWD: LazyLock<PathBuf> = LazyLock::new(|| PathBuf::from(std::env::args().next().unwrap()));
 
 #[derive(Parser, Debug)]
 #[command(
