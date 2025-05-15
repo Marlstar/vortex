@@ -8,5 +8,8 @@ pub enum Packet {
         total_size: usize,
         filename: String,
     },
-    Content(Vec<u8>),
+    Content{
+        index: usize,
+        bytes: Vec<u8>,
+    },
 }

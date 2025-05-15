@@ -37,11 +37,11 @@ impl Client {
         }
 
         let mut buf = vec![0u8; size];
-        for i in 0..chunks {
-            let start = i * MAX_CHUNK_SIZE;
-            let end = usize::min((i + 1) * MAX_CHUNK_SIZE, size);
+        for _ in 0..chunks {
             let chunk = self.recv_body_chunk().unwrap();
-            if let Packet::Content(bytes) = chunk {
+            if let Packet::Content{ bytes, index } = chunk {
+                let start = index * MAX_CHUNK_SIZE;
+                let end = usize::min((index + 1) * MAX_CHUNK_SIZE, size);
                 buf[start..end].copy_from_slice(&bytes);
             } else {
                 log::error!("Non-content packet received, aborting");
