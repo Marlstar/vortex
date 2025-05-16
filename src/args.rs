@@ -41,6 +41,7 @@ pub struct SendArgs {
 #[derive(clap::Args, Debug, Clone)]
 pub struct ReceiveArgs {
     /// Server address
+    #[arg(value_parser = crate::network::phrase::arg_to_ipv4)]
     pub server_addr: Ipv4Addr,
 
     /// Where to save the received file

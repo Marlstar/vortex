@@ -1,13 +1,12 @@
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
-use std::thread::JoinHandle;
-use serde::Serialize;
 use byteorder::{WriteBytesExt, BigEndian};
 
 use crate::ARGS;
 use crate::Error;
 use crate::network::packet::Packet;
+use crate::network::phrase;
 
 use super::packet::{Content, Header, MAX_CHUNK_SIZE};
 
@@ -31,6 +30,9 @@ impl Server {
     pub fn main(&mut self) {
         let path = self.path.clone();
         let packets = std::thread::spawn(|| serialise_packets(make_packets(path)));
+
+        let phrase = phrase::ipv4_phrase(phrase::local_ip());
+        println!("Use this phrase to receive: \"{phrase}\"");
 
         loop {
             if self.accept() { break; }
