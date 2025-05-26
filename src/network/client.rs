@@ -1,7 +1,7 @@
 use std::{io::{Read, Write}, net::{TcpStream, ToSocketAddrs}, path::{Path, PathBuf}};
 use crate::{args::ReceiveArgs, Error, ARGS, CWD};
-use super::packet::{Packet, MAX_CHUNK_SIZE};
-use byteorder::{ReadBytesExt, BigEndian};
+use super::packet::{Content, Packet, MAX_CHUNK_SIZE};
+use byteorder::{ReadBytesExt, WriteBytesExt, BigEndian};
 
 const BUF_CAPACITY: usize = 1024;
 
@@ -19,6 +19,11 @@ impl Client {
 
     pub fn main(&mut self) {
         let header;
+        let write_packet_idx = |i: usize, c: Content, buf: &mut Vec<u8>, total_size: usize| {
+            let start = c.index * MAX_CHUNK_SIZE;
+            let end = usize::min((c.index + 1) * MAX_CHUNK_SIZE, total_size);
+            buf[start..end].copy_from_slice(&c.bytes);
+        };
 
         // let bytes = self.recv().unwrap();
         if let Packet::Header(h) = self.recv_header().unwrap() {
@@ -35,19 +40,40 @@ impl Client {
         }
 
         let mut buf = vec![0u8; header.total_size];
+        let mut received = vec![false; header.chunk_count];
         for _ in 0..header.chunk_count {
             let chunk = self.recv_body_chunk().unwrap();
             if let Packet::Content(c) = chunk {
-                let start = c.index * MAX_CHUNK_SIZE;
-                let end = usize::min((c.index + 1) * MAX_CHUNK_SIZE, header.total_size);
-                buf[start..end].copy_from_slice(&c.bytes);
+                received[c.index] = true;
+                write_packet_idx(c.index, c, &mut buf, header.total_size);
             } else {
                 log::error!("Non-content packet received, aborting");
                 return;
             }
         }
+        loop {
+            let not_received = received.iter().enumerate().filter_map(|(i,a)| if !a { Some(i) } else { None }).collect::<Vec<usize>>();
+            if not_received.is_empty() { break; }
+            log::warn!("Missing packets: {not_received:?}");
+
+            for i in not_received {
+                let packet = self.request_packet(i).unwrap();
+                if let Packet::Content(c) = packet {
+                    write_packet_idx(i, c, &mut buf, header.total_size);
+                    received[i] = true;
+                }
+            }
+        }
+        self.socket.write_u32::<BigEndian>(super::code::FINISHED).unwrap();
         let mut file = std::fs::File::create_new(self.output_path.as_ref().unwrap()).unwrap();
         file.write_all(&buf).unwrap();
+    }
+
+    fn request_packet(&mut self, idx: usize) -> Result<Packet, Error> {
+        self.socket.write_u32::<BigEndian>(super::code::REQUEST_PACKET)?;
+        self.socket.write_u32::<BigEndian>(idx as u32)?;
+        std::thread::sleep(std::time::Duration::from_secs(3));
+        return self.recv_body_chunk();
     }
 
     fn recv_header(&mut self) -> Result<Packet, Error> {

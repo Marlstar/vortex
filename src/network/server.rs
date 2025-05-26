@@ -1,7 +1,7 @@
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
-use byteorder::{WriteBytesExt, BigEndian};
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::ARGS;
 use crate::Error;
@@ -43,6 +43,24 @@ impl Server {
         for packet in &packets {
             self.send(packet);
         }
+
+        loop {
+            use super::code;
+            log::info!("waiting for status updates");
+            let client = self.client.as_mut().unwrap();
+            let scode = match client.read_u32::<BigEndian>() {
+                Ok(a) => a,
+                Err(_) => continue,
+            };
+            match scode {
+                code::REQUEST_PACKET => self.handle_packet_request(&packets),
+                code::FINISHED => {
+                    log::info!("transfer complete");
+                    break;
+                },
+                _ => (),
+            }
+        }
     }
 
     fn send(&mut self, bytes: &[u8]) {
@@ -63,6 +81,13 @@ impl Server {
         } else {
             return false;
         }
+    }
+
+    fn handle_packet_request(&mut self, packets: &Vec<Vec<u8>>) {
+        log::info!("handling packet request");
+        let client = self.client.as_mut().unwrap();
+        let idx = client.read_u32::<BigEndian>().unwrap();
+        self.send(&packets[idx as usize + 1]);
     }
 }
 
